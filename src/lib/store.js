@@ -24,6 +24,12 @@ export const useStore = create((set) => ({
     updateProduct: (id, updatedFields) => set((state) => ({
         products: state.products.map((p) => (p.id === id ? Object.assign(Object.assign({}, p), updatedFields) : p))
     })),
+    updateProductStatus: (id, status) =>
+        set((state) => ({
+            products: state.products.map((p) =>
+                p.id === id ? { ...p, status } : p
+            ),
+        })),
     deleteProduct: (id) => set((state) => ({
         products: state.products.filter((p) => p.id !== id)
     })),

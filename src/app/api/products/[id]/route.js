@@ -27,19 +27,34 @@ export async function GET(req, { params }) {
 // ===============================
 export async function PUT(req, { params }) {
     try {
-        const { id } = await params;
-        // Parse JSON body
+          const { id } = await params;
         const body = await req.json();
+
+        // ✅ CASE 1: STATUS UPDATE ONLY
+        if (body.status) {
+            await db.query(
+                "UPDATE products SET status=? WHERE id=?",
+                [body.status, id]
+            );
+
+            return NextResponse.json({ message: "Status updated successfully" });
+        }
+
+        // ✅ CASE 2: FULL PRODUCT UPDATE
         const { product_name, category, price, quantity } = body;
-        // Validate required fieldsS
+
         if (!product_name || !category || price === undefined || quantity === undefined) {
             return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
         }
-        // Update product in DB
-        await db.query("UPDATE products SET product_name=?, category=?, price=?, quantity=? WHERE id=?", [product_name, category, Number(price), Number(quantity), id]);
+
+        await db.query(
+            "UPDATE products SET product_name=?, category=?, price=?, quantity=? WHERE id=?",
+            [product_name, category, Number(price), Number(quantity), id]
+        );
+
         return NextResponse.json({ message: "Product updated successfully" });
-    }
-    catch (error) {
+
+    } catch (error) {
         console.error("PUT Error:", error);
         return NextResponse.json({ error: "Update failed" }, { status: 500 });
     }
@@ -50,7 +65,7 @@ export async function PUT(req, { params }) {
 export async function DELETE(req, { params }) {
     try {
         // Remove 'await' here
-        const { id } = params;
+          const { id } = await params;
         if (!id) {
             return NextResponse.json({ error: "Missing product ID" }, { status: 400 });
         }
