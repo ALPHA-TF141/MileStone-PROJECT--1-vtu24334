@@ -6,47 +6,20 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { suggestOptimalReorderQuantities } from "@/ai/flows/suggest-optimal-reorder-quantities-flow";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useStore } from "@/lib/store";
 export default function DashboardPage() {
     const router = useRouter();
     const { products, transactions } = useStore();
-    const [isAiLoading, setIsAiLoading] = useState(false);
-    const [aiSuggestions, setAiSuggestions] = useState([]);
     const [isMounted, setIsMounted] = useState(false);
     const totalProducts = products.length;
-    const lowStockProducts = products.filter(p => p.quantity <= (p.safetyStock || 0));
+    const lowStockProducts = products.filter(
+      p => p.quantity <= (p.safetyStock || 10)
+    );
     const recentTransactions = transactions.slice(0, 10);
-    const runAiAnalysis = async () => {
-        if (products.length === 0)
-            return;
-        setIsAiLoading(true);
-        try {
-            const input = products.map(p => ({
-                productId: p.id,
-                productName: p.name,
-                currentStock: p.quantity,
-                averageDailySales: p.averageDailySales || 0,
-                leadTimeDays: p.leadTimeDays || 0,
-                safetyStock: p.safetyStock || 0
-            }));
-            const result = await suggestOptimalReorderQuantities(input);
-            setAiSuggestions(result.filter(s => s.suggestedReorderQuantity > 0));
-        }
-        catch (err) {
-            console.error("AI Analysis failed:", err);
-        }
-        finally {
-            setIsAiLoading(false);
-        }
-    };
     useEffect(() => {
         setIsMounted(true);
-        if (products.length > 0) {
-            runAiAnalysis();
-        }
-    }, [products.length]);
+    }, []);
     return (<div className="space-y-8">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Inventory Overview</h1>
@@ -72,7 +45,12 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-destructive">{lowStockProducts.length}</div>
-            <p className="text-xs text-muted-foreground">Items requiring attention</p>
+            <p className="text-xs text-muted-foreground">
+              Low stock items: {lowStockProducts.length}
+            </p>
+            <div className="mt-2 text-xs text-muted-foreground">
+              {lowStockProducts.slice(0, 3).map(p => p.name).join(", ")}
+            </div>
           </CardContent>
         </Card>
 
@@ -100,44 +78,7 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        <Card className="lg:col-span-4">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle>AI Reorder Suggestions</CardTitle>
-              <CardDescription>Intelligent demand forecasting for low-stock items.</CardDescription>
-            </div>
-            <Button variant="outline" size="icon" onClick={runAiAnalysis} disabled={isAiLoading || products.length === 0}>
-              <RefreshCw className={`h-4 w-4 ${isAiLoading ? "animate-spin" : ""}`}/>
-            </Button>
-          </CardHeader>
-          <CardContent>
-            {isAiLoading ? (<div className="space-y-4">
-                <Skeleton className="h-20 w-full"/>
-                <Skeleton className="h-20 w-full"/>
-                <Skeleton className="h-20 w-full"/>
-              </div>) : aiSuggestions.length > 0 ? (<div className="space-y-4">
-                {aiSuggestions.map((suggestion) => (<div key={suggestion.productId} className="flex items-center justify-between p-4 border rounded-lg bg-accent/5 hover:bg-accent/10 transition-colors cursor-pointer group" onClick={() => router.push('/products')}>
-                    <div className="space-y-1">
-                      <p className="font-semibold text-sm group-hover:text-primary transition-colors">{suggestion.productName}</p>
-                      <p className="text-xs text-muted-foreground line-clamp-1">{suggestion.reasoning}</p>
-                      <div className="flex gap-2">
-                        <Badge variant="outline" className="text-[10px]">Level: {suggestion.reorderLevel}</Badge>
-                        <Badge variant="secondary" className="bg-accent/20 text-accent-foreground text-[10px]">Suggest: +{suggestion.suggestedReorderQuantity}</Badge>
-                      </div>
-                    </div>
-                    <Button size="sm" variant="default" className="ml-4" onClick={(e) => {
-                    e.stopPropagation();
-                    router.push('/transactions');
-                }}>
-                      <Plus className="h-3 w-3 mr-1"/> Reorder
-                    </Button>
-                  </div>))}
-              </div>) : (<div className="flex flex-col items-center justify-center h-[200px] text-muted-foreground bg-accent/5 rounded-lg border border-dashed">
-                <Sparkles className="h-10 w-10 mb-2 opacity-20"/>
-                <p>All stock levels are optimal</p>
-              </div>)}
-          </CardContent>
-        </Card>
+        
 
         <Card className="lg:col-span-3">
           <CardHeader>
